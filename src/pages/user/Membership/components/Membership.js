@@ -1,14 +1,19 @@
-/* eslint-disable jsx-a11y/anchor-is-valid */
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Cookies from "js-cookie"; // Import js-cookie for handling cookies
 import "../layout.css";
+import { useNavigate } from "react-router-dom";
 
 const Membership = () => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const apiUrl = process.env.REACT_APP_API_URL;
+  const navigate = useNavigate();
+
+  const onNavRoute = (endpoint) => {
+    navigate(endpoint);
+  };
 
   console.log(apiUrl);
 
@@ -46,28 +51,45 @@ const Membership = () => {
 
   //**fetching payment api */
   const handleSelectPlan = async (plan) => {
-    const accountId = Cookies.get("userId"); // Generate or fetch the actual account ID here
-    const amount = plan.price; // Use the plan price
+    const accountId = Cookies.get("userId");
+    const amount = plan.price;
+    const planId = plan.planId;
+    const token = Cookies.get("token");
+
+    // Redirect to login if user is not authenticated
+    if (!accountId || accountId === "undefined") {
+      navigate("/login");
+      return;
+    }
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
     try {
       const response = await fetch(
-        `https://api-be.fieldy.online/api/Payment/request-top-up-wallet-with-payos?userId=${accountId}&amount=${amount}`,
+        `https://api-be.fieldy.online/api/Membership/AddNewMembership`,
         {
-          method: "POST", // or GET based on your API requirements
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
+          body: JSON.stringify({
+            userId: accountId,
+            planId: planId,
+            status: "success",
+          }),
         }
       );
 
       const data = await response.json();
-      console.log("Payment API response:", data); // Log the payment response
+      console.log("Payment API response:", data);
 
-      if (data) {
-        // Redirect to the payment URL
-        window.location.href = data.data; // Navigate to the payment URL
+      // Check for payment URL and redirect if it exists
+      if (response.ok && data.data) {
+        window.location.href = data.data; // Redirect to payment URL
       } else {
-        // Handle the error case (e.g., show a message to the user)
         alert(data.message || "Failed to create payment URL.");
       }
     } catch (error) {
@@ -114,19 +136,51 @@ const Membership = () => {
                     >
                       Select Plan
                     </button>
-                    {/* <a
-                      href="#payout_modal"
-                      data-bs-toggle="modal"
-                      className="btn btn-outline-primary btn-block"
-                    >
-                      Select Plan
-                    </a> */}
                   </div>
                 </div>
               ))
             ) : (
               <p>No plans available</p>
             )}
+          </div>
+        </div>
+        <div class="page-title">
+          <h3>Current Plan</h3>
+        </div>
+        <div class="row">
+          <div class="col-lg-12">
+            <div class="member-plan pro-box">
+              <div class="member-detail">
+                <div class="row">
+                  <div class="col-md-4">
+                    <h5>The Unlimited</h5>
+                    <div class="yr-amt">
+                      Our most popular plan for small teams.
+                    </div>
+                    <div class="expiry-on">
+                      <span>
+                        <i class="feather-calendar"></i>Renew Date:
+                      </span>
+                      24 JAN 2022
+                    </div>
+                  </div>
+                  <div class="col-md-8 change-plan mt-3 mt-md-0">
+                    <div>
+                      <h3>$1200</h3>
+                      <div class="yr-duration">Duration: One Year</div>
+                    </div>
+                    <div class="change-plan-btn">
+                      <a href="#" class="btn btn-primary-lite">
+                        Cancel Subscription
+                      </a>
+                      <a href="#" class="btn btn-primary black-btn">
+                        Change Plan
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -297,10 +351,9 @@ export default Membership;
               </tr>
             </tbody>
           </table>
-        </div> */
-}
-{
-  /* </div>
+        </div> 
+
+   </div>
     </div>
   );
 };
